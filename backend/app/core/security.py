@@ -14,7 +14,7 @@ def normalize_email(email:str)->str:
 def hash_password(password:str)->str:
 	return password_hasher.hash(password)
 
-def verify_password(password:str, hashed_password:str)->str:
+def verify_password(password:str, hashed_password:str)->bool:
 	try:
 		return password_hasher.verify(hashed_password,password)
 	except VerifyMismatchError:
