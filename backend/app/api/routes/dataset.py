@@ -31,7 +31,7 @@ def upload_dataset(
 		return dataset_service.create_dataset(
 			db,
 			owner_id=current_user.id,
-			orignal_filename=original_filename,
+			original_filename=original_filename,
 			stored_filename=stored_filename,
 			file_size=file_size,
 			content_type=file.content_type or "text/csv"
@@ -39,7 +39,7 @@ def upload_dataset(
 	except SQLAlchemyError as exc:
 		db.rollback()
 		try:
-			storage_services.delete_csv(storage_services)
+			storage_services.delete_csv(stored_filename)
 		except OSError:
 			logger.exception("Failed to remove uploaded CSV after database failure")
 		logger.exception("Failed to save dataset metadata")
@@ -63,7 +63,7 @@ def get_dataset(dataset_id:int,db:Session=Depends(get_db),current_user:User=Depe
 
 @router.delete("/{dataset_id}",status_code=status.HTTP_204_NO_CONTENT)
 def remove_dataset(dataset_id:int,db:Session=Depends(get_db),current_user:User=Depends(get_current_user)):
-	dataset=dataset_service.get_owned_dataset(db,dataset_id=dataset.id,owner_id=current_user.id)
+	dataset=dataset_service.get_owned_dataset(db,dataset_id=dataset_id,owner_id=current_user.id)
 	if dataset is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail="Dataset not found.")
 	stored_filename=dataset_service.delete_dataset(db,dataset)

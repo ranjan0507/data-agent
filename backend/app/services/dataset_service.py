@@ -5,12 +5,12 @@ from backend.app.db.models import Dataset
 
 def create_dataset(
 		db:Session,*, 
-		owner_id:int,orignal_filename:str,stored_filename:str,
+		owner_id:int,original_filename:str,stored_filename:str,
 		file_size:int,content_type:str
 )->Dataset:
 	dataset=Dataset(
 		owner_id=owner_id,
-		orignal_filename=orignal_filename,
+		original_filename=original_filename,
 		stored_filename=stored_filename,
 		file_size=file_size,
 		content_type=content_type
