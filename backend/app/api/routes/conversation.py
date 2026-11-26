@@ -55,7 +55,7 @@ def get_conversation(
 		db,conversation_id=conversation_id,owner_id=current_user.id
 	)
 
-@router.post("/conversation/{conversation_id}/messages",response_model=MessageResponse,status_code=201)
+@router.post("/conversations/{conversation_id}/messages",response_model=MessageResponse,status_code=201)
 def create_message(
 	conversation_id:int,
 	payload:MessageCreate,

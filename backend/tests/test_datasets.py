@@ -162,3 +162,86 @@ def test_dataset_is_private_and_delete_removes_file(dataset_test_context):
     assert client.get(
         f"/datasets/{dataset_id}", headers=owner_headers
     ).status_code == 404
+
+def test_conversation_create_list_and_retrieve(dataset_test_context):
+    client, session_factory, _ = dataset_test_context
+    headers = auth_headers(session_factory, "conversation-owner@example.com")
+
+    upload = client.post(
+        "/datasets",
+        headers=headers,
+        files={"file": ("sales.csv", b"month,total\nJan,12\n", "text/csv")},
+    )
+    assert upload.status_code == 201
+    dataset_id = upload.json()["id"]
+
+    created = client.post(
+        f"/datasets/{dataset_id}/conversations",
+        headers=headers,
+    )
+    assert created.status_code == 201
+    conversation_id = created.json()["id"]
+    assert created.json()["dataset_id"] == dataset_id
+
+    listed = client.get(
+        f"/datasets/{dataset_id}/conversations",
+        headers=headers,
+    )
+    assert listed.status_code == 200
+    assert [item["id"] for item in listed.json()] == [conversation_id]
+
+    retrieved = client.get(
+        f"/conversations/{conversation_id}",
+        headers=headers,
+    )
+    assert retrieved.status_code == 200
+    assert retrieved.json()["id"] == conversation_id
+
+
+def test_conversation_messages_persist_and_are_private(dataset_test_context):
+    client, session_factory, _ = dataset_test_context
+    owner_headers = auth_headers(session_factory, "message-owner@example.com")
+    other_headers = auth_headers(session_factory, "message-other@example.com")
+
+    upload = client.post(
+        "/datasets",
+        headers=owner_headers,
+        files={"file": ("sales.csv", b"month,total\nJan,12\n", "text/csv")},
+    )
+    assert upload.status_code == 201
+    dataset_id = upload.json()["id"]
+
+    created = client.post(
+        f"/datasets/{dataset_id}/conversations",
+        headers=owner_headers,
+    )
+    assert created.status_code == 201
+    conversation_id = created.json()["id"]
+
+    saved = client.post(
+        f"/conversations/{conversation_id}/messages",
+        headers=owner_headers,
+        json={"role": "user", "content": "What is the total?"},
+    )
+    assert saved.status_code == 201
+
+    listed = client.get(
+        f"/conversations/{conversation_id}/messages",
+        headers=owner_headers,
+    )
+    assert listed.status_code == 200
+    assert listed.json()[0]["content"] == "What is the total?"
+    assert listed.json()[0]["role"] == "user"
+
+    assert client.post(
+        f"/datasets/{dataset_id}/conversations",
+        headers=other_headers,
+    ).status_code == 404
+    assert client.get(
+        f"/conversations/{conversation_id}",
+        headers=other_headers,
+    ).status_code == 404
+    assert client.get(
+        f"/conversations/{conversation_id}/messages",
+        headers=other_headers,
+    ).status_code == 404
