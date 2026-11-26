@@ -20,7 +20,7 @@ def _dataset_directory()->Path:
 
 def _original_filename(filename:str|None)->str:
 	name=(filename or "").replace("\\","/").rsplit("/",1)[-1]
-	if not name or len(name)>255 or Path(name).suffix().lower()!=".csv":
+	if not name or len(name)>255 or Path(name).suffix.lower()!=".csv":
 		raise ValueError("Upload a CSV file with a filename no longer than 255 characters.")
 	return name
 
