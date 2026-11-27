@@ -8,13 +8,14 @@ import duckdb
 
 from backend.app.analytics.dataset_access import (
 	DatasetFileError,
-	get_dataset_path
+	get_dataset_path,
 )
 from backend.app.analytics.sql_validator import (
 	DATASET_TABLE,
 	SQLValidationError,
 	validate_sql
 )
+
 from backend.app.db.models import Dataset
 
 MAX_RESULT_ROWS=1000
@@ -73,7 +74,7 @@ def run_sql(dataset:Dataset, query:str)->dict[str,Any]:
 		raise SQLExecutionError("Could not initialize DuckDB.") from exc
 
 	timed_out=threading.Event()
-	lock=threading.lock()
+	lock=threading.Lock()
 	connection_closed=False
 
 	def interrupt_query()->None:
@@ -86,9 +87,13 @@ def run_sql(dataset:Dataset, query:str)->dict[str,Any]:
 	timer=threading.Timer(QUERY_TIMEOUT_SECONDS,interrupt_query)
 	timer.start()
 	try:
-		connection.read_csv(str(dataset_path),auto_detect=True).create_table(
-			DATASET_TABLE
+		connection.read_csv(str(dataset_path),auto_detect=True).create_view(
+			"_dataset_source"
 		)
+		connection.execute(
+			'CREATE TEMP TABLE "_dataset" AS SELECT * FROM "_dataset_source"' 
+		)
+		connection.execute('DROP VIEW "_dataset_source"')
 		connection.execute("SET enable_external_access=false")
 		cursor=connection.execute(validated_sql)
 		if cursor.description is None:
