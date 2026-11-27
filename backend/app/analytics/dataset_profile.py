@@ -9,6 +9,10 @@ import duckdb
 
 from backend.app.core.config import settings
 from backend.app.db.models import Dataset
+from backend.app.analytics.dataset_access import (
+	DatasetFileError,
+	get_dataset_path
+)
 
 MAX_PREVIEW_ROWS=100
 MAX_PROFILE_COLUMNS=50
@@ -36,14 +40,10 @@ class DatasetProfileError(Exception):
 	pass
 
 def _dataset_path(dataset: Dataset)->Path:
-	filename=dataset.stored_filename
-	if not STORED_FILENAME_PATTERN.fullmatch(filename):
-		raise DatasetProfileError("Dataset has an invalid stored filename.")
-	stored_dir=Path(settings.storage_dir).resolve()
-	path=(stored_dir/filename).resolve()
-	if path.parent!=stored_dir or not path.is_file():
-		raise DatasetProfileError("Dataset file was not found.")
-	return path
+	try:
+		return get_dataset_path(dataset)
+	except DatasetFileError as exc:
+		raise DatasetProfileError(str(exc)) from exc
 
 def _quote_identifier(name:str)->str:
 	return '"'+name.replace('"','""')+'"'
@@ -72,8 +72,7 @@ def get_dataset_profile(dataset:Dataset)->dict[str,Any]:
 	try:
 		relation=connection.read_csv(
 			str(path),
-			auto_detect=True,
-			nullstr=""
+			auto_detect=True
 		)
 		relation.create_view("_profile_dataset")
 		all_columns=relation.columns
